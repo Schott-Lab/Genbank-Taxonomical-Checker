@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
 Author: Arshia Farajollahi
-Purpose: Groups GenBank records by taxonomy wordlist* match.
+Purpose: Groups GenBank records by taxonomy wordlist match.
 Usage: python3 Genbank_Taxonomical_Check.py <input.gb> | -a | --all
 
 
-*The wordlist may be edited for customized matching.
+The wordlist may be edited for customized matching.
 """
 
 import glob
