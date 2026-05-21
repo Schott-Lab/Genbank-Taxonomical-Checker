@@ -2,8 +2,11 @@
 """
 Author: Arshia Farajollahi
 Purpose: Groups GenBank records by taxonomy wordlist match.
-Usage: python3 Genbank_Taxonomical_Check.py <input.gb> | -a | --all
+Usage: python3 Genbank_Taxonomical_Check.py <input.gb> | -a | --all [-f | --first-match]
 
+By default, a record is added to every wordlist term it matches. With
+-f / --first-match, a record is assigned only to the first term it matches
+(in wordlist order) and skipped thereafter.
 
 The wordlist may be edited for customized matching.
 """
@@ -14,21 +17,34 @@ import sys
 
 from Bio import SeqIO
 
-if len(sys.argv) != 2 or sys.argv[1] in ("-h", "--help"):
-    print("Usage: python3 Genbank_Taxonomical_Check.py <input.gb> | -a | --all")
-    sys.exit(0 if len(sys.argv) == 2 else 1)
+args = sys.argv[1:]
 
-# Check for the -a or --all flag
-if sys.argv[1] in ("-a", "--all"):
+if not args or "-h" in args or "--help" in args:
+    print(
+        "Usage: python3 Genbank_Taxonomical_Check.py <input.gb> | -a | --all  [-f | --first-match]"
+    )
+    sys.exit(0 if args else 1)
+
+# Pull out the first-match flag, leaving the file/-a token behind
+first_match = any(f in args for f in ("-f", "--first-match"))
+args = [a for a in args if a not in ("-f", "--first-match")]
+
+if len(args) != 1:
+    print(
+        "Usage: python3 Genbank_Taxonomical_Check.py <input.gb> | -a | --all  [-f | --first-match]"
+    )
+    sys.exit(1)
+
+if args[0] in ("-a", "--all"):
     target_files = sorted(glob.glob("*.gb"))
     if not target_files:
         print("Error: No .gb files found in the current directory.")
         sys.exit(1)
 else:
-    if not os.path.isfile(sys.argv[1]):
-        print(f"Error: file not found: {sys.argv[1]}")
+    if not os.path.isfile(args[0]):
+        print(f"Error: file not found: {args[0]}")
         sys.exit(1)
-    target_files = [sys.argv[1]]
+    target_files = [args[0]]
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ONLY EDIT taxonomy_wordlist = [] below
@@ -145,7 +161,8 @@ for file_path in target_files:
             if search_term in lineage_lower:
                 groups[word].append(raw)
                 matched = True
-                break
+                if first_match:
+                    break
 
         if not matched:
             no_match.append(raw)
