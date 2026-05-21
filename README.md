@@ -2,13 +2,13 @@
 
 A command-line tool that groups [GenBank](https://www.ncbi.nlm.nih.gov/genbank/) (`.gb`) records into separate files based on whether their taxonomic lineage matches terms in a configurable wordlist.
 
-Built on [Biopython](https://biopython.org/), the script reads each record's taxonomy and organism annotations, assigns the record to the first matching term in the wordlist, and writes per-term GenBank files alongside a summary report. Records that match nothing are collected separately so none are silently dropped.
+Built on [Biopython](https://biopython.org/), the script reads each record's taxonomy and organism annotations, assigns the record to every wordlist term it matches (or, with `-f`, only the first), and writes per-term GenBank files alongside a summary report. Records that match nothing are collected separately so none are silently dropped.
 
 ---
 
 ## Features
 
-- **Wordlist-driven grouping** — each record is sorted into the first term it matches, in wordlist order.
+- **Wordlist-driven grouping** — by default each record is sorted into *every* term it matches; with `-f` / `--first-match` it is sorted into only the first matching term, in wordlist order.
 - **Two matching styles** — plain terms match the term itself; prefixed terms (`Prefix;taxonname`) match only the part after the semicolon, letting you annotate entries while keeping the search precise.
 - **No-match capture** — unmatched records are written to a dedicated `NO-MATCH.gb` file rather than discarded.
 - **Per-file output folders** — results for each input live in their own directory, keeping batch runs tidy.
@@ -41,17 +41,19 @@ No packaging step is required. Download `Genbank_Taxonomical_Check.py` and run i
 
 ```bash
 python3 Genbank_Taxonomical_Check.py <input.gb>
-python3 Genbank_Taxonomical_Check.py -a        # or --all
-python3 Genbank_Taxonomical_Check.py -h        # or --help
+python3 Genbank_Taxonomical_Check.py -a              # or --all
+python3 Genbank_Taxonomical_Check.py <input.gb> -f   # or --first-match
+python3 Genbank_Taxonomical_Check.py -h              # or --help
 ```
 
 | Argument | Description |
 | --- | --- |
 | `<input.gb>` | Process a single GenBank file. |
 | `-a`, `--all` | Process every `.gb` file in the current directory. |
+| `-f`, `--first-match` | Assign each record to only the **first** wordlist term it matches (default: every matching term). |
 | `-h`, `--help` | Show usage and exit. |
 
-The script requires exactly one argument.
+The script requires exactly one input target (`<input.gb>` or `-a`/`--all`). The `-f`/`--first-match` flag is optional and may appear in any position.
 
 ---
 
@@ -91,7 +93,12 @@ taxonomy_wordlist = [
 
 ## How matching works
 
-For each record, the script builds a lineage set from the record's `taxonomy` annotation plus its `organism` name. Each wordlist term is checked in order, and the record is assigned to the **first** term whose search value appears as a component of that lineage. Once matched, the record is not considered for later terms. Records matching no term go to the no-match group.
+For each record, the script builds a lineage set from the record's `taxonomy` annotation plus its `organism` name. Each wordlist term is checked in order against that lineage.
+
+- **Default (all matches)** — the record is added to *every* term whose search value appears as a component of the lineage. A record nested within several listed taxa (for example a record matching both `Mammalia` and `Eutheria`) therefore appears in each of those term files.
+- **First-match (`-f` / `--first-match`)** — the record is assigned only to the **first** term it matches, in wordlist order, and is not considered for later terms. This produces mutually exclusive groups. When using this mode, list more specific terms before broader ones so the narrower term wins.
+
+In either mode, records matching no term go to the no-match group.
 
 ---
 
@@ -106,6 +113,8 @@ For each input file, a folder named `<basename>_taxonsort/` is created containin
 | `result_report_<basename>.txt` | A text summary: each term, a `Y`/`-` match flag, and the record count. |
 
 A per-term file is created for every wordlist entry; entries with no matches produce an empty file.
+
+> **Note:** In the default (all-matches) mode a single record may be written to more than one term file, so the per-term counts can sum to more than the number of input records. Use `-f` / `--first-match` if you need each record assigned to exactly one group.
 
 ---
 
